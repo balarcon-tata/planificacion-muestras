@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lector QR Producción</title>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{--bg:#090b10;--s0:#0d1018;--s1:#121620;--s2:#181d28;--s3:#1e2433;--b0:#1f2638;--b1:#293044;--b2:#34405c;--g:#2be89a;--gd:rgba(43,232,154,.12);--y:#f5c842;--yd:rgba(245,200,66,.12);--r:#f05070;--rd:rgba(240,80,112,.12);--bl:#4d9ef5;--bld:rgba(77,158,245,.12);--pu:#9b7ef8;--tx:#d4daf0;--tx2:#8a97b6;--tx3:#455270;--sans:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;}
+*{box-sizing:border-box;margin:0;padding:0} html,body{min-height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans)}
+body{font-size:13px} ::-webkit-scrollbar{width:6px;height:6px} ::-webkit-scrollbar-thumb{background:var(--b1);border-radius:4px}
+.app{min-height:100vh;display:flex;flex-direction:column}
+.hdr{height:56px;display:flex;align-items:center;gap:12px;padding:0 18px;background:var(--s0);border-bottom:1px solid var(--b0)}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--g),#11b97d);display:flex;align-items:center;justify-content:center;font-size:18px}
+.h1{font-size:15px;font-weight:800}.h1 em{font-style:normal;color:var(--g)} .h2{font-size:10px;color:var(--tx3)}
+.hdr-r{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:600 12px var(--sans);padding:8px 13px;border-radius:10px;border:1px solid var(--b0);cursor:pointer;background:var(--s2);color:var(--tx2);transition:.15s}
+.btn:hover{border-color:var(--b2);color:var(--tx)} .btn.primary{background:var(--g);color:#000;border-color:transparent} .btn.primary:hover{filter:brightness(1.06)} .btn.danger{color:var(--r);border-color:rgba(240,80,112,.35)} .btn.danger:hover{background:var(--rd)} .btn:disabled{opacity:.45;cursor:not-allowed}
+.main{display:grid;grid-template-columns:380px 1fr;min-height:calc(100vh - 56px)} @media(max-width:920px){.main{grid-template-columns:1fr}}
+.left{background:var(--s0);border-right:1px solid var(--b0);padding:18px;display:flex;flex-direction:column;gap:18px}
+.right{padding:18px;display:flex;flex-direction:column;gap:18px;overflow:auto}
+.card{background:linear-gradient(180deg,rgba(18,22,32,.96),rgba(13,17,25,.98));border:1px solid var(--b0);border-radius:18px;padding:18px;box-shadow:0 12px 32px rgba(0,0,0,.22)}
+.title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);font-weight:800;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media(max-width:500px){.grid2{grid-template-columns:1fr}}
+.label{display:block;font-size:11px;color:var(--tx2);margin-bottom:8px;font-weight:600}
+.select,.input{width:100%;background:var(--s1);border:1px solid var(--b0);border-radius:14px;color:var(--tx);padding:14px 16px;font:500 14px var(--sans);outline:none}
+.select:focus,.input:focus{border-color:var(--g)} .input.mono{font-family:var(--mono)}
+.status{display:flex;align-items:flex-start;gap:10px;background:var(--s1);border:1px solid var(--b0);border-radius:14px;padding:14px 14px;color:var(--tx2);line-height:1.5}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--tx3);margin-top:4px;flex:0 0 12px}.dot.on{background:var(--g)} .dot.err{background:var(--r)} .dot.warn{background:var(--y)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.small{font-size:11px;color:var(--tx3);line-height:1.6;margin-top:10px}
+#readerWrap{position:relative;height:420px;min-height:420px;max-height:420px;background:#000;border-radius:18px;border:1px solid var(--b1);overflow:hidden;isolation:isolate}
+#reader{position:absolute;inset:0;width:100%;height:100%;min-height:0;overflow:hidden}
+#reader video,#reader canvas,#reader img{width:100%!important;height:100%!important;object-fit:cover!important;border-radius:18px;background:#000}
+#reader > div{width:100%!important;height:100%!important}
+#reader__scan_region{background:transparent!important} #reader__dashboard{display:none!important}
+.frame{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;z-index:3}
+.frameBox{width:min(62vw,380px);height:min(62vw,380px);max-width:380px;max-height:380px;border:3px solid rgba(43,232,154,.95);border-radius:24px;position:relative;box-shadow:0 0 0 9999px rgba(0,0,0,.15) inset}
+.frameBox:before,.frameBox:after{content:'';position:absolute;width:42px;height:42px;border:6px solid #fff;border-radius:10px}.frameBox:before{left:-4px;top:-4px;border-right:none;border-bottom:none}.frameBox:after{right:-4px;bottom:-4px;border-left:none;border-top:none}
+.frameHint{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(6,9,14,.7);border:1px solid rgba(255,255,255,.08);padding:10px 16px;border-radius:999px;color:#fff;font-size:13px;backdrop-filter:blur(8px)}
+.scanFlash{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .12s ease;z-index:2}
+.scanFlash.ok{background:rgba(43,232,154,.32)}
+.scanFlash.dup{background:rgba(245,200,66,.28)}
+.scanFlash.err{background:rgba(240,80,112,.30)}
+.scanFlash.show{opacity:1}
+.feedback{display:none;padding:12px 14px;border-radius:12px;font-weight:700;font-size:12px}.feedback.show{display:block}.feedback.ok{background:var(--gd);border:1px solid rgba(43,232,154,.3);color:var(--g)}.feedback.dup{background:var(--yd);border:1px solid rgba(245,200,66,.32);color:var(--y)}.feedback.err{background:var(--rd);border:1px solid rgba(240,80,112,.3);color:var(--r)}
+.manual{display:grid;grid-template-columns:1fr auto;gap:10px} @media(max-width:500px){.manual{grid-template-columns:1fr}}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px} @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}} @media(max-width:520px){.kpis{grid-template-columns:1fr}}
+.kpi{background:var(--s1);border:1px solid var(--b0);border-radius:16px;padding:16px;position:relative}.kpi:before{content:'';position:absolute;left:0;right:0;top:0;height:3px;border-radius:16px 16px 0 0;background:var(--acc,var(--g))}.kpi .l{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}.kpi .v{font-size:20px;font-weight:800}
+.lastBox{display:flex;justify-content:space-between;align-items:center;background:var(--s1);border:1px solid var(--b0);border-radius:14px;padding:16px}.lastOrder{font:700 18px var(--mono);color:var(--bl)}.lastMeta{font-size:11px;color:var(--tx3);margin-top:6px}.lastStage{padding:10px 14px;border-radius:999px;background:rgba(155,126,248,.16);color:var(--pu);font-weight:700}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.filters .input,.filters .select{padding:11px 12px;border-radius:12px;font-size:12px}.count{margin-left:auto;color:var(--tx3);font-size:11px}
+.tableWrap{border:1px solid var(--b0);border-radius:18px;overflow:auto}.table{width:100%;border-collapse:collapse}.table th{background:var(--s2);color:var(--tx3);font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:12px;text-align:left}.table td{padding:12px;border-top:1px solid var(--b0)} .table tr:hover td{background:rgba(255,255,255,.02)}
+.tMono{font-family:var(--mono);font-weight:700;color:var(--bl)} .tStage{font-weight:700;color:var(--pu)} .empty{padding:34px;text-align:center;color:var(--tx3)}
+.iconBtn{background:none;border:none;color:var(--tx3);cursor:pointer;font-size:14px}.iconBtn:hover{color:var(--r)}
+.toast{position:fixed;right:18px;bottom:18px;background:var(--s3);border:1px solid var(--b2);padding:10px 14px;border-radius:10px;color:var(--tx);box-shadow:0 12px 32px rgba(0,0,0,.5);transform:translateY(80px);opacity:0;transition:.25s;z-index:2000}.toast.show{transform:translateY(0);opacity:1}.toast.ok{border-left:3px solid var(--g)}.toast.warn{border-left:3px solid var(--y)}.toast.err{border-left:3px solid var(--r)}
+
+.menuBtn{display:none;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;border:1px solid var(--b0);background:var(--s2);color:var(--tx);cursor:pointer;transition:.15s;flex-direction:column;gap:4px}
+.menuBtn:hover{border-color:var(--b2)}
+.menuBtn span{display:block;width:18px;height:2px;background:currentColor;border-radius:2px}
+.menuBackdrop{display:none}
+@media(max-width:920px){
+  .hdr{padding:0 14px}
+  .hdr-r{gap:6px}
+  .btn{padding:7px 10px;font-size:11px}
+  .menuBtn{display:flex}
+  .main{display:block;min-height:calc(100vh - 56px)}
+  .left{position:fixed;top:56px;left:0;bottom:0;width:min(88vw,360px);max-width:360px;z-index:120;transform:translateX(-104%);transition:transform .25s ease;overflow:auto;box-shadow:18px 0 40px rgba(0,0,0,.45)}
+  .left.open{transform:translateX(0)}
+  .right{padding:14px}
+  .menuBackdrop{position:fixed;inset:56px 0 0 0;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:110;display:none}
+  .menuBackdrop.show{display:block}
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div class="logo">📷</div>
+    <div><div class="h1">Lector <em>QR</em> Producción</div><div class="h2">Escaneo por cámara y registro por etapa</div></div>
+    
+    <button class="menuBtn" id="menuBtn" onclick="toggleMobileMenu()" aria-label="Abrir controles">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="hdr-r">
+      <button class="btn" onclick="exportCSV()">⬇ Exportar CSV</button>
+      <button class="btn danger" onclick="clearAll()">🗑 Limpiar todo</button>
+    </div>
+  </header>
+
+  <div class="menuBackdrop" id="menuBackdrop" onclick="closeMobileMenu()"></div>
+
+  <div class="main">
+    <aside class="left" id="mobileMenu">
+      <div style="display:none;justify-content:flex-end;margin-bottom:6px" id="mobileMenuCloseWrap"><button class="btn" onclick="closeMobileMenu()">✕ Cerrar</button></div>
+      <div class="card">
+        <div class="title">Controles de escaneo</div>
+        <div class="grid2">
+          <div>
+            <label class="label" for="stageSelect">Etapa</label>
+            <select id="stageSelect" class="select"></select>
+          </div>
+          <div>
+            <label class="label" for="cameraSelect">Cámara</label>
+            <select id="cameraSelect" class="select"></select>
+          </div>
+        </div>
+        <div class="status" style="margin-top:14px"><div id="camDot" class="dot"></div><div id="camStatus">Detectando cámaras…</div></div>
+        <div class="actions">
+          <button id="startBtn" class="btn primary" onclick="startCamera()">▶ Iniciar cámara</button>
+          <button id="stopBtn" class="btn" onclick="stopCamera()" disabled>■ Detener cámara</button>
+          <button class="btn" onclick="reloadCameras(true)">↻ Recargar cámaras</button>
+        </div>
+        <div class="small">Se intenta seleccionar la cámara frontal por defecto. En teléfono o tablet, la cámara solo funciona si abres la página desde <strong>https</strong> o <strong>localhost</strong>. Desde <strong>file://</strong> la mayoría de navegadores la bloquean.</div>
+      </div>
+
+      <div class="card">
+        <div class="title">Escaneo manual de respaldo</div>
+        <div class="manual">
+          <input id="manualInput" class="input mono" placeholder="Escribe o pega la orden…" autocomplete="off" spellcheck="false">
+          <button class="btn primary" onclick="registerManual()">✔ Registrar</button>
+        </div>
+        <div id="feedback" class="feedback" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <div class="title">Último registro</div>
+        <div id="lastBox" class="lastBox"><div><div class="lastOrder">—</div><div class="lastMeta">Aún no hay registros</div></div><div class="lastStage">—</div></div>
+      </div>
+    </aside>
+
+    <section class="right">
+      <div class="card">
+        <div class="title">Escaneo por cámara</div>
+        <div id="readerWrap">
+          <div id="reader"></div>
+          <div id="scanFlash" class="scanFlash"></div>
+          <div class="frame"><div class="frameBox"></div><div class="frameHint">Alinea el QR dentro del marco</div></div>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi" style="--acc:var(--g)"><div class="l">Total registros</div><div class="v" id="statTotal">0</div></div>
+        <div class="kpi" style="--acc:var(--bl)"><div class="l">Órdenes únicas</div><div class="v" id="statOrders">0</div></div>
+        <div class="kpi" style="--acc:var(--pu)"><div class="l">Etapa activa</div><div class="v" id="statStage">0</div></div>
+        <div class="kpi" style="--acc:var(--y)"><div class="l">Hoy</div><div class="v" id="statToday">0</div></div>
+      </div>
+
+      <div class="card">
+        <div class="title">Historial</div>
+        <div class="filters">
+          <input id="hfOrden" class="input" style="max-width:180px" placeholder="🔍 Buscar orden…">
+          <select id="hfEtapa" class="select" style="max-width:180px"></select>
+          <input id="hfFecha" class="input" style="max-width:170px" type="date">
+          <button class="btn" onclick="clearFilters()">✕ Limpiar filtros</button>
+          <div id="histCount" class="count">0 registros</div>
+        </div>
+        <div class="tableWrap" style="margin-top:14px">
+          <table class="table">
+            <thead><tr><th>Orden</th><th>Etapa</th><th>Fecha</th><th>Hora</th><th style="width:40px;text-align:center">✕</th></tr></thead>
+            <tbody id="histBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+'use strict';
+
+const SUPABASE_URL = "https://auclvnesasgjmwkoswwj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_p6MgGIEpSUHA2OG1aNLRxQ_RSh9edpZ";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const STAGES=['Corte','Pegado','Troqueles','Estampado','Costura','Cantos','Ensamble'];
+const RECENT_MS=2200;
+const REFRESH_MS=4000;
+
+let activeStage=STAGES[0];
+let scanLog=[];
+let availableCameras=[];
+let selectedCameraId='';
+let scanner=null;
+let scannerRunning=false;
+let recentReads=new Map();
+let permissionPrimed=false;
+let refreshTimer=null;
+let isLoading=false;
+
+function isSecureEnough(){return window.isSecureContext || location.hostname==='localhost' || location.hostname==='127.0.0.1';}
+function esc(s){return String(s||'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+function showToast(msg,type='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';clearTimeout(showToast._t);showToast._t=setTimeout(()=>t.classList.remove('show'),3200);}
+function setStatus(html,state=''){document.getElementById('camStatus').innerHTML=html;const d=document.getElementById('camDot');d.className='dot';if(state)d.classList.add(state);}
+function focusManual(){document.getElementById('manualInput').focus();}
+function setBusy(b){isLoading=b;}
+
+function flashScan(kind, text=''){
+  const box=document.getElementById('scanFlash');
+  if(!box) return;
+  box.className='scanFlash show '+kind;
+  box.innerHTML = `<div class="sfInner"><div class="sfLabel">${kind==='ok'?'REGISTRADO':kind==='warn'?'DUPLICADO':'ERROR'}</div>${text?`<div class="sfText">${esc(text)}</div>`:''}</div>`;
+  clearTimeout(flashScan._t);
+  flashScan._t=setTimeout(()=>{
+    box.className='scanFlash';
+    box.innerHTML='';
+  },1000);
+}
+
+async function fetchLog(showErrors=false){
+  try{
+    const { data, error } = await supabase
+      .from('scan_log')
+      .select('id, orden, etapa, timestamp, fecha, hora, dispositivo')
+      .order('timestamp', { ascending:false })
+      .limit(1000);
+    if(error) throw error;
+    scanLog = (data || []).map(row => ({
+      id: String(row.id),
+      orden: row.orden || '',
+      etapa: row.etapa || '',
+      timestamp: row.timestamp || '',
+      fecha: row.fecha || '',
+      hora: row.hora || '',
+      dispositivo: row.dispositivo || ''
+    }));
+    renderHistory();
+    updateStats();
+    updateLast(scanLog[0]||null);
+    return true;
+  }catch(err){
+    console.error(err);
+    if(showErrors) showToast('No se pudo cargar historial desde Supabase','err');
+    return false;
+  }
+}
+
+function startAutoRefresh(){
+  stopAutoRefresh();
+  refreshTimer=setInterval(()=>{
+    if(!document.hidden) fetchLog(false);
+  }, REFRESH_MS);
+}
+function stopAutoRefresh(){
+  if(refreshTimer){ clearInterval(refreshTimer); refreshTimer=null; }
+}
+
+function buildStageSelect(){
+  const s=document.getElementById('stageSelect');
+  s.innerHTML=STAGES.map(v=>`<option value="${v}">${v}</option>`).join('');
+  s.value=activeStage;
+  s.onchange=()=>{activeStage=s.value;updateStats();focusManual();};
+}
+
+function buildStageFilter(){
+  const s=document.getElementById('hfEtapa');
+  const cur=s.value;
+  s.innerHTML='<option value="">Todas las etapas</option>'+STAGES.map(v=>`<option value="${v}">${v}</option>`).join('');
+  if(cur) s.value=cur;
+}
+
+async function primePermission(){
+  if(permissionPrimed) return;
+  const constraints={video:{facingMode:'user', width:{ideal:1280}, height:{ideal:720}}, audio:false};
+  const stream=await navigator.mediaDevices.getUserMedia(constraints);
+  permissionPrimed=true;
+  stream.getTracks().forEach(t=>t.stop());
+}
+
+function pickFrontCamera(cams){
+  if(!cams.length) return null;
+  const frontPatterns=[/front/i,/frontal/i,/user/i,/face/i,/facetime/i,/integrated/i,/webcam/i,/built-in/i];
+  return cams.find(c=>frontPatterns.some(re=>re.test(c.label||''))) || cams[0];
+}
+
+function populateCameraSelect(){
+  const sel=document.getElementById('cameraSelect');
+  if(!availableCameras.length){
+    sel.innerHTML='<option value="">Sin cámaras</option>';
+    selectedCameraId='';
+    return;
+  }
+  sel.innerHTML=availableCameras.map((c,i)=>`<option value="${c.id}">${esc(c.label||('Cámara '+(i+1)))}</option>`).join('');
+  if(!selectedCameraId || !availableCameras.some(c=>c.id===selectedCameraId)){
+    const pref=pickFrontCamera(availableCameras);
+    selectedCameraId=pref?pref.id:availableCameras[0].id;
+  }
+  sel.value=selectedCameraId;
+  sel.onchange=async ()=>{
+    selectedCameraId=sel.value;
+    if(scannerRunning) await restartCamera();
+  };
+}
+
+async function reloadCameras(showFeedback=false){
+  const sel=document.getElementById('cameraSelect');
+  sel.innerHTML='<option value="">Cargando cámaras…</option>';
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    setStatus('Este navegador no soporta acceso a cámara.', 'err');
+    availableCameras=[]; populateCameraSelect();
+    return;
+  }
+  if(!isSecureEnough()){
+    setStatus('La cámara requiere <strong>https</strong> o <strong>localhost</strong>. En <strong>file://</strong> no funcionará, aunque el navegador muestre permisos.', 'err');
+    availableCameras=[]; populateCameraSelect();
+    if(showFeedback) showToast('Abre la página en https o localhost', 'err');
+    return;
+  }
+  try{
+    setStatus('Solicitando permiso de cámara…', 'warn');
+    await primePermission();
+    const devices=await navigator.mediaDevices.enumerateDevices();
+    availableCameras=devices.filter(d=>d.kind==='videoinput').map((d,i)=>({id:d.deviceId,label:d.label||('Cámara '+(i+1))}));
+    populateCameraSelect();
+    if(availableCameras.length){
+      const pref=availableCameras.find(c=>c.id===selectedCameraId) || pickFrontCamera(availableCameras);
+      selectedCameraId=pref.id;
+      document.getElementById('cameraSelect').value=selectedCameraId;
+      setStatus(`Lista: ${availableCameras.length} cámara(s) detectada(s).`, '');
+      if(showFeedback) showToast('Cámaras cargadas correctamente','ok');
+    }else{
+      setStatus('No se detectaron cámaras de video en este dispositivo.', 'err');
+      if(showFeedback) showToast('No se detectaron cámaras','err');
+    }
+  }catch(err){
+    console.error(err);
+    availableCameras=[];
+    populateCameraSelect();
+    const insecure=!isSecureEnough();
+    if(insecure){
+      setStatus('La cámara está bloqueada porque la página no está en <strong>https</strong> o <strong>localhost</strong>.', 'err');
+    }else if(/notallowed|permission|denied/i.test(err?.message||err?.name||'')){
+      setStatus('Permiso de cámara denegado. Autoriza el acceso y vuelve a intentar.', 'err');
+    }else{
+      setStatus('No se pudieron leer las cámaras del dispositivo.', 'err');
+    }
+    if(showFeedback) showToast('Error al cargar cámaras','err');
+  }
+}
+
+function cleanupCooldown(){
+  const now=Date.now();
+  for(const [k,t] of recentReads.entries()) if(now-t>RECENT_MS) recentReads.delete(k);
+}
+
+async function stopCamera(){
+  try{
+    if(scanner){
+      await scanner.stop().catch(()=>{});
+      await scanner.clear().catch(()=>{});
+    }
+  }catch(e){ console.warn(e); }
+  scannerRunning=false;
+  const start=document.getElementById('startBtn');
+  const stop=document.getElementById('stopBtn');
+  start.disabled=false; stop.disabled=true;
+  setStatus(availableCameras.length?'Cámara detenida.':'No hay cámara seleccionada disponible.', availableCameras.length?'warn':'err');
+}
+
+async function startCamera(){
+  if(scannerRunning) return;
+  if(!selectedCameraId){ showToast('No hay cámara disponible','err'); return; }
+  if(!isSecureEnough()){ showToast('La cámara requiere https o localhost','err'); return; }
+
+  const reader=document.getElementById('reader');
+  reader.innerHTML='';
+  scanner=new Html5Qrcode('reader');
+  const start=document.getElementById('startBtn');
+  const stop=document.getElementById('stopBtn');
+  start.disabled=true;
+  stop.disabled=false;
+
+  try{
+    await scanner.start(
+      { deviceId: { exact: selectedCameraId } },
+      {
+        fps: 10,
+        qrbox: (vw, vh)=> {
+          const size = Math.min(vw, vh, 260);
+          return { width: size, height: size };
+        },
+        aspectRatio: 1.333333
+      },
+      onScanSuccess,
+      ()=>{}
+    );
+    scannerRunning=true;
+    setStatus('Cámara activa y lista para escanear.', 'ok');
+  }catch(err){
+    console.error(err);
+    scannerRunning=false;
+    start.disabled=false;
+    stop.disabled=true;
+    setStatus('No se pudo iniciar esa cámara. Prueba otra del listado.', 'err');
+    showToast('No se pudo iniciar la cámara seleccionada','err');
+  }
+}
+
+async function restartCamera(){
+  if(!scannerRunning) return;
+  await stopCamera();
+  await startCamera();
+}
+
+async function onScanSuccess(decodedText){
+  cleanupCooldown();
+  const value=String(decodedText||'').trim();
+  if(!value) return;
+  const k=`${activeStage}::${value}`;
+  const prev=recentReads.get(k);
+  const now=Date.now();
+  if(prev && now-prev<RECENT_MS) return;
+  recentReads.set(k, now);
+  await registerScan(value, 'camera');
+}
+
+function getDeviceLabel(){
+  const selected=availableCameras.find(c=>c.id===selectedCameraId);
+  return selected?.label || (window.innerWidth<921?'movil':'web');
+}
+
+async function registerScan(rawValue, source='manual'){
+  const orden=String(rawValue||'').trim();
+  if(!orden){
+    flashScan('err', 'Orden vacía');
+    showToast('Escanea o escribe una orden', 'err');
+    return;
+  }
+
+  const now = new Date();
+  const record = {
+    orden,
+    etapa: activeStage,
+    timestamp: now.toISOString(),
+    fecha: now.toLocaleDateString('es-GT',{day:'2-digit',month:'2-digit',year:'numeric'}),
+    hora: now.toLocaleTimeString('es-GT',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+    dispositivo: source === 'camera' ? `camera:${getDeviceLabel()}` : `manual:${navigator.userAgent.slice(0,50)}`
+  };
+
+  try{
+    setBusy(true);
+    const { data, error } = await supabase
+      .from('scan_log')
+      .insert(record)
+      .select()
+      .single();
+
+    if(error){
+      if(error.code === '23505' || /duplicate key|unique/i.test(error.message||'')){
+        flashScan('warn', `${orden} ya estaba en ${activeStage}`);
+        showToast(`${orden} ya fue registrada en ${activeStage}.`, 'warn');
+        await fetchLog(false);
+        return;
+      }
+      throw error;
+    }
+
+    flashScan('ok', `${orden} · ${activeStage}`);
+    showToast(`${orden} registrada en ${activeStage}.`, 'ok');
+    document.getElementById('manualInput').value='';
+    if(data){
+      scanLog.unshift({
+        id: String(data.id),
+        orden: data.orden,
+        etapa: data.etapa,
+        timestamp: data.timestamp,
+        fecha: data.fecha,
+        hora: data.hora,
+        dispositivo: data.dispositivo || ''
+      });
+    } else {
+      await fetchLog(false);
+    }
+    renderHistory();
+    updateStats();
+    updateLast(scanLog[0]||record);
+  }catch(err){
+    console.error(err);
+    flashScan('err', 'Error al guardar');
+    showToast('No se pudo guardar en Supabase', 'err');
+  }finally{
+    setBusy(false);
+  }
+}
+
+async function registerManual(){ 
+  const v=document.getElementById('manualInput').value; 
+  await registerScan(v, 'manual'); 
+  focusManual(); 
+}
+
+function updateLast(rec){
+  const box=document.getElementById('lastBox');
+  if(!rec){ box.innerHTML='<div class="lastEmpty">Aún no hay registros</div>'; return; }
+  box.innerHTML=`<div class="lastRow"><div><div class="lastOrden">${esc(rec.orden)}</div><div class="lastTime">${esc(rec.fecha||'')} · ${esc(rec.hora||'')}</div></div><div class="lastStage">${esc(rec.etapa)}</div></div>`;
+}
+function updateStats(){
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('statTotal').textContent=scanLog.length;
+  document.getElementById('statOrders').textContent=new Set(scanLog.map(r=>r.orden)).size;
+  document.getElementById('statStage').textContent=scanLog.filter(r=>r.etapa===activeStage).length;
+  document.getElementById('statToday').textContent=scanLog.filter(r=>(r.timestamp||'').slice(0,10)===today).length;
+}
+
+function filteredLog(){ 
+  const o=document.getElementById('hfOrden').value.trim().toLowerCase(); 
+  const e=document.getElementById('hfEtapa').value; 
+  const f=document.getElementById('hfFecha').value; 
+  return scanLog.filter(r=>{ if(o && !r.orden.toLowerCase().includes(o)) return false; if(e && r.etapa!==e) return false; if(f && (r.timestamp||'').slice(0,10)!==f) return false; return true; }); 
+}
+function renderHistory(){ 
+  const rows=filteredLog(); 
+  document.getElementById('histCount').textContent=`${rows.length} registro${rows.length!==1?'s':''}`; 
+  const b=document.getElementById('histBody'); 
+  if(!rows.length){ b.innerHTML='<tr><td colspan="5" class="empty">Sin registros con los filtros actuales</td></tr>'; return; } 
+  b.innerHTML=rows.map(r=>`<tr><td class="tMono">${esc(r.orden)}</td><td class="tStage">${esc(r.etapa)}</td><td>${esc(r.fecha||'')}</td><td>${esc(r.hora||'')}</td><td style="text-align:center"><button class="iconBtn" onclick="deleteRecord('${r.id}')">✕</button></td></tr>`).join(''); 
+}
+async function deleteRecord(id){
+  const rec=scanLog.find(r=>r.id===id); 
+  if(!rec) return; 
+  try{
+    const { error } = await supabase.from('scan_log').delete().eq('id', id);
+    if(error) throw error;
+    scanLog=scanLog.filter(r=>r.id!==id); 
+    renderHistory(); updateStats(); updateLast(scanLog[0]||null); 
+    showToast(`Registro eliminado: ${rec.orden}`,'warn');
+  }catch(err){
+    console.error(err);
+    showToast('No se pudo eliminar. Si quieres borrar desde la web, crea también una policy DELETE.', 'err');
+  }
+}
+function clearFilters(){ document.getElementById('hfOrden').value=''; document.getElementById('hfEtapa').value=''; document.getElementById('hfFecha').value=''; renderHistory(); }
+function exportCSV(){ 
+  if(!scanLog.length){ showToast('Sin registros para exportar','warn'); return; } 
+  const header=['ORDEN','ETAPA','FECHA','HORA','TIMESTAMP','DISPOSITIVO']; 
+  const rows=scanLog.map(r=>[r.orden,r.etapa,r.fecha,r.hora,r.timestamp,r.dispositivo||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')); 
+  const csv='\uFEFF'+[header.join(','),...rows].join('\n'); 
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); 
+  const url=URL.createObjectURL(blob); 
+  const a=document.createElement('a'); a.href=url; a.download=`QR_Log_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url); 
+  showToast('CSV exportado','ok'); 
+}
+async function clearAll(){ 
+  if(!scanLog.length){ showToast('No hay registros','warn'); return; } 
+  if(!confirm(`¿Eliminar todos los ${scanLog.length} registros?`)) return;
+  try{
+    const { error } = await supabase.from('scan_log').delete().neq('id', '');
+    if(error) throw error;
+    scanLog=[]; 
+    renderHistory(); updateStats(); updateLast(null); 
+    showToast('Historial borrado','warn');
+  }catch(err){
+    console.error(err);
+    showToast('No se pudo limpiar. Si quieres vaciar desde la web, crea también una policy DELETE.', 'err');
+  }
+}
+
+function bindEvents(){ 
+  document.getElementById('manualInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); registerManual(); } }); 
+  ['hfOrden','hfEtapa','hfFecha'].forEach(id=>document.getElementById(id).addEventListener('input',renderHistory)); 
+  document.getElementById('hfEtapa').addEventListener('change',renderHistory); 
+  document.addEventListener('visibilitychange',()=>{ 
+    if(document.hidden){ cleanupCooldown(); } 
+    else { fetchLog(false); }
+  }); 
+  document.getElementById('startBtn').addEventListener('click',()=>{ if(isMobileLayout()) closeMobileMenu(); }); 
+  document.getElementById('stopBtn').addEventListener('click',()=>{ if(isMobileLayout()) closeMobileMenu(); }); 
+}
+
+function isMobileLayout(){ return window.matchMedia('(max-width: 920px)').matches; }
+function toggleMobileMenu(){
+  const menu=document.getElementById('mobileMenu');
+  const backdrop=document.getElementById('menuBackdrop');
+  if(!menu||!backdrop||!isMobileLayout()) return;
+  menu.classList.toggle('open');
+  backdrop.classList.toggle('show', menu.classList.contains('open'));
+}
+function closeMobileMenu(){
+  const menu=document.getElementById('mobileMenu');
+  const backdrop=document.getElementById('menuBackdrop');
+  if(menu) menu.classList.remove('open');
+  if(backdrop) backdrop.classList.remove('show');
+}
+function syncMobileMenuState(){
+  const closeWrap=document.getElementById('mobileMenuCloseWrap');
+  if(closeWrap) closeWrap.style.display=isMobileLayout()?'flex':'none';
+  if(!isMobileLayout()) closeMobileMenu();
+}
+
+async function init(){
+  buildStageSelect();
+  buildStageFilter();
+  bindEvents();
+  focusManual();
+  await fetchLog(true);
+  await reloadCameras(false);
+  startAutoRefresh();
+  syncMobileMenuState();
+  window.addEventListener('resize', syncMobileMenuState);
+}
+
+window.startCamera = startCamera;
+window.stopCamera = stopCamera;
+window.reloadCameras = reloadCameras;
+window.registerManual = registerManual;
+window.exportCSV = exportCSV;
+window.clearAll = clearAll;
+window.deleteRecord = deleteRecord;
+window.clearFilters = clearFilters;
+window.toggleMobileMenu = toggleMobileMenu;
+window.closeMobileMenu = closeMobileMenu;
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
