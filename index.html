@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Producción por Hora Muestras</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#f4f6f9;--card:#ffffff;--card2:#f9fafc;--ink:#101828;--muted:#667085;--line:#d0d5dd;
+  --accent:#990000;--accent2:#6f0000;--blue:#2563eb;--green:#16a34a;--warn:#f59e0b;--danger:#dc2626;
+  --dark:#111827;--soft:#eef2f7;--shadow:0 12px 34px rgba(15,23,42,.08);--radius:14px;
+  --thead:#f8fafc;--stripe:#f3f4f6;--panel-border:#e5e7eb;
+}
+body.dark{
+  --bg:#070b12;--card:#0f172a;--card2:#111c30;--ink:#e5e7eb;--muted:#94a3b8;--line:#263244;
+  --accent:#c1121f;--accent2:#7f0610;--blue:#60a5fa;--green:#22c55e;--warn:#fbbf24;--danger:#fb7185;
+  --dark:#e5e7eb;--soft:#111827;--shadow:0 18px 42px rgba(0,0,0,.36);--thead:#111827;--stripe:#182236;--panel-border:#263244;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,var(--bg),var(--soft));font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;color:var(--ink);font-size:13px;min-height:100vh;}
+.app{padding:14px 18px 20px;max-width:1520px;margin:auto;}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;min-height:36px;}
+.brand-mini{display:flex;align-items:center;gap:10px;color:var(--muted);font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:11px;}
+.brand-icon{width:28px;height:28px;border-radius:9px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--accent);}
+.status{display:flex;gap:8px;align-items:center;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:7px 11px;font-size:12px;font-weight:700;box-shadow:var(--shadow)}
+.dot{width:9px;height:9px;border-radius:50%;background:#999;box-shadow:0 0 0 4px rgba(148,163,184,.16)}.dot.live{background:var(--green)}.dot.poll{background:var(--warn)}.dot.err{background:var(--danger)}
+.tabs{display:flex;gap:8px;margin:6px 0 14px}.tab{border:1px solid var(--line);border-radius:999px;padding:9px 14px;font-size:13px;font-weight:800;cursor:pointer;color:var(--muted);background:var(--card);box-shadow:0 4px 14px rgba(15,23,42,.04);transition:.16s}.tab:hover{transform:translateY(-1px);color:var(--ink)}.tab.on{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-color:transparent;box-shadow:0 10px 22px rgba(153,0,0,.22)}
+.filters{display:grid;grid-template-columns:repeat(8,minmax(120px,1fr));gap:10px;margin-bottom:12px;background:rgba(255,255,255,.45);border:1px solid var(--panel-border);border-radius:18px;padding:12px;box-shadow:var(--shadow);backdrop-filter:blur(12px)}body.dark .filters{background:rgba(15,23,42,.72)}
+.field{display:flex;flex-direction:column;gap:5px}.field label{font-weight:800;font-size:11px;color:var(--muted);letter-spacing:.02em}.field select,.field input{height:36px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:0 10px;font-size:13px;outline:none}.field select:focus,.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.actions{display:flex;gap:8px;align-items:end}.btn{height:36px;border:0;border-radius:10px;padding:0 13px;background:#172033;color:#fff;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 7px 16px rgba(17,24,39,.14);transition:.16s}.btn:hover{transform:translateY(-1px);filter:brightness(1.04)}.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.theme-field{justify-content:flex-end}.theme-toggle{height:36px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);display:flex;align-items:center;gap:8px;padding:0 12px;font-weight:800;cursor:pointer}.theme-toggle .knob{width:18px;height:18px;border-radius:50%;background:var(--ink);display:inline-block;box-shadow:inset 0 0 0 5px var(--card)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:14px 0}.kpi{background:var(--card);border:1px solid var(--panel-border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}.kpi small{display:block;color:var(--muted);font-weight:800;letter-spacing:1px;text-transform:uppercase;font-size:10px}.kpi strong{display:block;font-size:26px;margin-top:7px}.kpi span{display:block;color:var(--muted);font-weight:600;margin-top:2px;font-size:12px}
+.panel{background:var(--card);border:1px solid var(--panel-border);box-shadow:var(--shadow);overflow:hidden;border-radius:16px}.panel-title{text-align:left;font-size:15px;font-weight:900;padding:12px 16px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.05em;background:var(--card2)}.table-wrap{max-height:62vh;overflow:auto}.table{width:100%;border-collapse:collapse;font-size:12px}.table th{position:sticky;top:0;background:var(--thead);color:var(--muted);z-index:2;text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-weight:900;white-space:nowrap;cursor:pointer;text-transform:uppercase;font-size:10px;letter-spacing:.04em}.table th:hover{color:var(--blue)}.table td{padding:8px 10px;border-bottom:1px solid var(--panel-border);vertical-align:middle}.table tbody tr:nth-child(even){background:var(--stripe)}.table tbody tr:hover{background:rgba(37,99,235,.08)}.num{text-align:right;font-variant-numeric:tabular-nums}.mono{font-variant-numeric:tabular-nums}.strong{font-weight:900}.total-row td{font-weight:900;border-top:2px solid var(--blue);background:var(--card)!important}
+.hour-title{max-width:860px;margin:4px auto 14px;text-align:center;font-size:24px;font-weight:900;padding:10px 18px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink);border-bottom:3px solid var(--accent)}.hour-panel{max-width:980px;margin:auto}.hour-table th,.hour-table td{text-align:right}.hour-table th:first-child,.hour-table td:first-child{text-align:left}.hour-table .plus{color:var(--muted);font-weight:900;margin-right:8px}.hidden{display:none!important}.note{color:var(--muted);font-weight:600;margin:10px 0 0;text-align:center;font-size:12px}.small-warn{color:#9a5a00;background:#fff6da;border:1px solid #f3d891;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-weight:700}.right{margin-left:auto}
+
+.op-toggle{width:20px;height:20px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;margin-right:8px;cursor:pointer;vertical-align:middle;transition:.15s}.op-toggle:hover{color:var(--blue);border-color:var(--blue);transform:translateY(-1px)}
+.op-main{font-weight:700}.child-row td{background:rgba(37,99,235,.035)!important;color:var(--muted);font-size:11px}.child-name{padding-left:34px!important;color:var(--ink)!important;font-weight:700}.child-name small{display:block;color:var(--muted);font-weight:600;margin-top:2px}.hour-table .zero{color:transparent}.hour-table .num{font-variant-numeric:tabular-nums}.pill-unit{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;background:var(--card2);color:var(--muted);font-size:10px;font-weight:800;margin-left:8px;vertical-align:middle}
+
+@media(max-width:1100px){.filters{grid-template-columns:repeat(3,1fr)}.kpis{grid-template-columns:repeat(2,1fr)}.app{padding:10px}.tab{font-size:12px}.table{font-size:11px}.hour-title{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar"><div class="brand-mini"><span class="brand-icon">▦</span><span>Panel de escaneos</span></div><div class="status"><span id="sbDot" class="dot"></span><span id="sbLbl">Conectando...</span></div></div>
+  <div class="tabs">
+    <button class="tab on" id="tabHour" onclick="setView('hour')">Producción por hora muestras</button>
+    <button class="tab" id="tabDetail" onclick="setView('detail')">Detalle de escaneos</button>
+  </div>
+
+  <div class="filters">
+    <div class="field"><label>Desde</label><input type="date" id="fDesde"></div>
+    <div class="field"><label>Hasta</label><input type="date" id="fHasta"></div>
+    <div class="field"><label>Orden</label><select id="fOrden"><option value="">Todas</option></select></div>
+    <div class="field"><label>Etapa</label><select id="fEtapa"><option value="">Todas</option></select></div>
+    <div class="field"><label>Línea</label><select id="fLinea"><option value="">Todas</option></select></div>
+    <div class="field"><label>Operación</label><select id="fOperacion"><option value="">Todas</option></select></div>
+    <div class="field"><label>Empleado</label><select id="fEmpleado"><option value="">Todas</option></select></div>
+    <div class="field"><label>Buscar</label><input id="fBuscar" placeholder="Orden, etapa, empleado..." oninput="applyFilters()"></div>
+    <div class="field theme-field"><label>Vista</label><button type="button" class="theme-toggle" onclick="toggleTheme()"><span class="knob"></span><span id="themeLbl">Claro</span></button></div>
+    <div class="field" id="hourDateWrap"><label>Día producción</label><input type="date" id="fHourDate"></div>
+    <div class="field actions"><label>&nbsp;</label><button class="btn" onclick="reloadAll()">Actualizar</button></div>
+    <div class="field actions"><label>&nbsp;</label><button class="btn ghost" onclick="clearFilters()">Limpiar</button></div>
+  </div>
+
+  <div id="loadWarning" class="small-warn hidden"></div>
+
+  <section id="hourView">
+    <div class="hour-title">Producción por hora muestras</div>
+    <div class="panel hour-panel">
+      <div class="panel-title">Producción por hora</div>
+      <div class="table-wrap">
+        <table class="table hour-table" id="hourTable"></table>
+      </div>
+    </div>
+    <p class="note">Las unidades escaneadas de 6:00 a 6:59 cuentan en la columna 6, 7:00 a 7:59 en la 7, y así sucesivamente.</p>
+  </section>
+
+  <section id="detailView" class="hidden">
+    <div class="kpis">
+      <div class="kpi"><small>Escaneos filtrados</small><strong id="kRows">0</strong><span>Registros visibles</span></div>
+      <div class="kpi"><small>Órdenes</small><strong id="kOrders">0</strong><span>Únicas</span></div>
+      <div class="kpi"><small>Operativos</small><strong id="kOps">0</strong><span>Empleados únicos</span></div>
+      <div class="kpi"><small>Cantidad</small><strong id="kQty">0</strong><span>Suma filtrada</span></div>
+      <div class="kpi"><small>Último escaneo</small><strong id="kLast" style="font-size:20px">--</strong><span>Actualización automática</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Detalle escaneos</div>
+      <div class="table-wrap"><table class="table" id="detailTable"></table></div>
+    </div>
+  </section>
+</div>
+<script>
+'use strict';
+const SUPABASE_URL='https://auclvnesasgjmwkoswwj.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_p6MgGIEpSUHA2OG1aNLRxQ_RSh9edpZ';
+const SCAN_TABLE='scan_log';
+const TZ='America/Guatemala';
+const MAIN_OPERATION='CUADRE';
+const HOUR_START=6;
+const HOUR_END=17;
+let sb=null, rtChannel=null, pollInt=null, allRows=[], filteredRows=[], sortState={key:'timestamp',dir:'desc'}, currentView='hour', lastTimestamp='';
+const expandedOps = new Set();
+const $=id=>document.getElementById(id);
+function isoDateLocal(d=new Date()){ const x=new Date(d); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,10); }
+function toGTDateInput(ts){ if(!ts) return ''; const d=new Date(ts); if(isNaN(d)) return ''; const parts=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d); const o=Object.fromEntries(parts.map(p=>[p.type,p.value])); return `${o.year}-${o.month}-${o.day}`; }
+function toGTTime(ts){ if(!ts) return ''; const d=new Date(ts); if(isNaN(d)) return ''; return new Intl.DateTimeFormat('es-GT',{timeZone:TZ,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d); }
+function safe(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function norm(v){return String(v??'').trim();}
+function normUpper(v){return norm(v).toUpperCase();}
+function qty(v){
+  const raw=String(v??'').trim();
+  if(!raw) return 0;
+  const n=Number(raw.replace(/,/g,''));
+  return Number.isFinite(n)&&n>0?n:0;
+}
+function pick(row,names){ const keys=Object.keys(row||{}); for(const n of names){ const f=keys.find(k=>k.toLowerCase()===n.toLowerCase()); if(f) return row[f]; } return ''; }
+function normalizeRow(r){
+  const timestamp=pick(r,['timestamp','created_at'])||'';
+  const fechaTxt=pick(r,['fecha'])||'';
+  const horaTxt=pick(r,['hora'])||'';
+  return {
+    id:pick(r,['id'])||'',
+    qr:pick(r,['qr','bulto','bulto_qr'])||'',
+    prefijo:pick(r,['prefijo'])||'',
+    orden:pick(r,['orden'])||'',
+    etapa:pick(r,['etapa'])||'',
+    linea:pick(r,['linea','línea'])||'',
+    idOperacion:pick(r,['id_operacion','id operación','id_operación','operacion_id'])||'',
+    operacion:pick(r,['operacion','operación'])||'',
+    tipoMarca:pick(r,['tipo_marca','tipo marca'])||'',
+    codOperativo:pick(r,['cod_operativo','cod operativo','codigo_operativo'])||'',
+    operativo:pick(r,['operativo','empleado','empleados'])||'',
+    cantidad:qty(pick(r,['cantidad','qty','unidades','unidad','cant','cantidad_escaneada','cantidad escaneada','muestras','piezas','pcs'])),
+    timestamp,
+    fecha: fechaTxt || toGTDateInput(timestamp),
+    hora: horaTxt || toGTTime(timestamp),
+    fechaIso: timestamp ? toGTDateInput(timestamp) : parseFechaText(fechaTxt),
+    search:''
+  };
+}
+function parseFechaText(s){ const m=String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; return String(s||'').slice(0,10); }
+function enrichSearch(r){ r.search=[r.qr,r.prefijo,r.orden,r.etapa,r.linea,r.idOperacion,r.operacion,r.tipoMarca,r.codOperativo,r.operativo,r.fecha,r.hora].join(' ').toLowerCase(); return r; }
+function setSbStatus(st,msg){ $('sbDot').className='dot '+st; $('sbLbl').textContent=msg; }
+function localDateRangeToUtc(from,to){ const start=from ? new Date(from+'T00:00:00-06:00').toISOString() : null; const end=to ? new Date(to+'T23:59:59.999-06:00').toISOString() : null; return {start,end}; }
+async function fetchPaged(fromDate,toDate){
+  const {start,end}=localDateRangeToUtc(fromDate,toDate);
+  const pageSize=1000; let from=0, out=[], safety=0;
+  while(true){
+    let q=sb.from(SCAN_TABLE).select('*').order('timestamp',{ascending:true}).range(from,from+pageSize-1);
+    if(start) q=q.gte('timestamp',start); if(end) q=q.lte('timestamp',end);
+    const {data,error}=await q; if(error) throw error;
+    out.push(...(data||[]));
+    if(!data || data.length<pageSize) break;
+    from+=pageSize; safety++; if(safety>50) break;
+  }
+  return out.map(normalizeRow).map(enrichSearch);
+}
+async function reloadAll(){
+  if(!sb) return;
+  try{
+    setSbStatus('poll','Cargando...');
+    const from=$('fDesde').value, to=$('fHasta').value;
+    allRows=await fetchPaged(from,to);
+    lastTimestamp=allRows.length ? allRows[allRows.length-1].timestamp : '';
+    $('loadWarning').classList.add('hidden');
+    buildOptions(); applyFilters(); setSbStatus('live','En vivo + sondeo');
+  }catch(e){ console.error(e); setSbStatus('err','Error de carga'); $('loadWarning').textContent='No pude cargar todos los escaneos. Revisa permisos RLS, nombre de columnas o conexión.'; $('loadWarning').classList.remove('hidden'); }
+}
+function buildOptions(){
+  fillSelect('fOrden',allRows.map(r=>r.orden)); fillSelect('fEtapa',allRows.map(r=>r.etapa)); fillSelect('fLinea',allRows.map(r=>r.linea)); fillSelect('fOperacion',allRows.map(r=>r.operacion)); fillSelect('fEmpleado',allRows.map(r=>r.operativo));
+}
+function fillSelect(id,values){ const sel=$(id), cur=sel.value; sel.innerHTML='<option value="">Todas</option>'; [...new Set(values.map(norm).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true})).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
+function applyFilters(){
+  const q=norm($('fBuscar').value).toLowerCase(), from=$('fDesde').value, to=$('fHasta').value;
+  const vals={orden:$('fOrden').value, etapa:$('fEtapa').value, linea:$('fLinea').value, operacion:$('fOperacion').value, operativo:$('fEmpleado').value};
+  filteredRows=allRows.filter(r=>{
+    if(from && r.fechaIso<from) return false; if(to && r.fechaIso>to) return false;
+    if(vals.orden && r.orden!==vals.orden) return false; if(vals.etapa && r.etapa!==vals.etapa) return false; if(vals.linea && r.linea!==vals.linea) return false; if(vals.operacion && r.operacion!==vals.operacion) return false; if(vals.operativo && r.operativo!==vals.operativo) return false;
+    if(q && !r.search.includes(q)) return false; return true;
+  });
+  renderKpis(); renderDetail(); renderHour();
+}
+['fDesde','fHasta','fOrden','fEtapa','fLinea','fOperacion','fEmpleado','fHourDate'].forEach(id=>document.addEventListener('change',e=>{ if(e.target&&e.target.id===id){ if(id==='fDesde'||id==='fHasta') reloadAll(); else applyFilters(); }}));
+function clearFilters(){ ['fOrden','fEtapa','fLinea','fOperacion','fEmpleado','fBuscar'].forEach(id=>$(id).value=''); const today=isoDateLocal(); $('fDesde').value=today; $('fHasta').value=today; $('fHourDate').value=today; reloadAll(); }
+function renderKpis(){
+  $('kRows').textContent=filteredRows.length.toLocaleString('es-GT'); $('kOrders').textContent=new Set(filteredRows.map(r=>normUpper(r.orden)).filter(Boolean)).size.toLocaleString('es-GT'); $('kOps').textContent=new Set(filteredRows.map(r=>normUpper(r.operativo)).filter(Boolean)).size.toLocaleString('es-GT'); $('kQty').textContent=filteredRows.reduce((a,r)=>a+r.cantidad,0).toLocaleString('es-GT');
+  const last=[...filteredRows].sort((a,b)=>String(b.timestamp).localeCompare(String(a.timestamp)))[0]; $('kLast').textContent=last?(last.fechaIso+' '+(last.hora||toGTTime(last.timestamp))):'--';
+}
+const detailCols=[
+  ['orden','Orden'],['etapa','Etapa'],['linea','Línea'],['operacion','Operación'],['operativo','Operativo'],['fechaIso','Fecha'],['hora','Hora'],['cantidad','Cantidad']
+];
+function sortRows(rows){ const {key,dir}=sortState; const mult=dir==='asc'?1:-1; return [...rows].sort((a,b)=>{let av=a[key],bv=b[key]; if(key==='cantidad'){av=Number(av)||0;bv=Number(bv)||0;return (av-bv)*mult;} return String(av??'').localeCompare(String(bv??''),'es',{numeric:true})*mult;}); }
+function setSort(key){ if(sortState.key===key) sortState.dir=sortState.dir==='asc'?'desc':'asc'; else sortState={key,dir:'asc'}; renderDetail(); }
+function renderDetail(){
+  const rows=sortRows(filteredRows); const arrow=k=>sortState.key===k?(sortState.dir==='asc'?' ▲':' ▼'):'';
+  $('detailTable').innerHTML='<thead><tr>'+detailCols.map(([k,l])=>`<th onclick="setSort('${k}')">${l}${arrow(k)}</th>`).join('')+'</tr></thead><tbody>'+rows.map(r=>`<tr><td class="mono">${safe(r.orden)}</td><td class="strong">${safe(r.etapa)}</td><td>${safe(r.linea)}</td><td>${safe(r.operacion)}</td><td>${safe(r.operativo)}</td><td class="mono">${safe(r.fechaIso)}</td><td class="mono">${safe(r.hora)}</td><td class="num">${r.cantidad.toLocaleString('es-GT')}</td></tr>`).join('')+`</tbody><tfoot><tr class="total-row"><td colspan="7">Total</td><td class="num">${filteredRows.reduce((a,r)=>a+r.cantidad,0).toLocaleString('es-GT')}</td></tr></tfoot>`;
+}
+function getHourFromRow(r){
+  if(r.timestamp){ const h=new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'2-digit',hour12:false}).format(new Date(r.timestamp)); return Number(h); }
+  const m=String(r.hora||'').match(/(\d{1,2}):(\d{2})/); if(!m) return null; let h=Number(m[1]); if(/p\.?\s*m/i.test(r.hora) && h<12) h+=12; if(/a\.?\s*m/i.test(r.hora) && h===12) h=0; return h;
+}
+function getGroupName(r){ return norm(r.etapa) || norm(r.operacion) || 'SIN ETAPA'; }
+function toggleOp(op){
+  const key=normUpper(op);
+  if(expandedOps.has(key)) expandedOps.delete(key); else expandedOps.add(key);
+  renderHour();
+}
+function renderHour(){
+  const day=$('fHourDate').value || isoDateLocal();
+  const hours=[]; for(let h=HOUR_START;h<=HOUR_END;h++) hours.push(h);
+
+  // La vista por hora usa el día seleccionado y respeta filtros operativos actuales.
+  const q=norm($('fBuscar').value).toLowerCase();
+  const vals={orden:$('fOrden').value, etapa:$('fEtapa').value, linea:$('fLinea').value, operacion:$('fOperacion').value, operativo:$('fEmpleado').value};
+  const dayRows=allRows.filter(r=>{
+    if(r.fechaIso!==day) return false;
+    if(vals.orden && r.orden!==vals.orden) return false;
+    if(vals.etapa && r.etapa!==vals.etapa) return false;
+    if(vals.linea && r.linea!==vals.linea) return false;
+    if(vals.operacion && r.operacion!==vals.operacion) return false;
+    if(vals.operativo && r.operativo!==vals.operativo) return false;
+    if(q && !r.search.includes(q)) return false;
+    return true;
+  });
+
+  let ops=[...new Set(dayRows.map(getGroupName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es',{numeric:true}));
+  if(!ops.some(o=>normUpper(o)===MAIN_OPERATION)) ops.unshift(MAIN_OPERATION);
+  else ops=[MAIN_OPERATION,...ops.filter(o=>normUpper(o)!==MAIN_OPERATION)];
+
+  const buildEmpty=()=>Object.fromEntries(hours.map(h=>[h,0]));
+  const matrix=ops.map(op=>{
+    const cells=buildEmpty();
+    const orderMap=new Map();
+    dayRows.forEach(r=>{
+      if(normUpper(getGroupName(r))!==normUpper(op)) return;
+      const h=getHourFromRow(r); if(!(h>=HOUR_START && h<=HOUR_END)) return;
+      // La vista por hora suma UNIDADES desde la columna cantidad.
+      // Si un registro viejo no trae cantidad, se cuenta como 1 unidad para no perderlo.
+      const unidadesVal = qty(r.cantidad) || 1;
+      cells[h] += unidadesVal;
+      const orderKey = norm(r.orden) || '(sin orden)';
+      if(!orderMap.has(orderKey)) {
+        orderMap.set(orderKey,{orden:orderKey,cells:buildEmpty(),total:0,escaneos:0});
+      }
+      const item = orderMap.get(orderKey);
+      item.cells[h] += unidadesVal;
+      item.total += unidadesVal;
+      item.escaneos += 1;
+    });
+    const children=[...orderMap.values()].sort((a,b)=>b.total-a.total || a.orden.localeCompare(b.orden,'es',{numeric:true}));
+    return {op,cells,total:Object.values(cells).reduce((a,b)=>a+b,0),children};
+  });
+
+  const totals=Object.fromEntries(hours.map(h=>[h,matrix.reduce((a,row)=>a+row.cells[h],0)]));
+  const grand=Object.values(totals).reduce((a,b)=>a+b,0);
+
+  const body=[];
+  matrix.forEach(row=>{
+    const isOpen=expandedOps.has(normUpper(row.op));
+    const sign=isOpen?'−':'+';
+    const childCount=row.children.length;
+    body.push(`<tr class="op-main"><td><button class="op-toggle" onclick="toggleOp('${safe(row.op).replace(/'/g,'&#39;')}')">${sign}</button>${safe(row.op)}${childCount?`<span class="pill-unit">${childCount} orden${childCount===1?'':'es'}</span>`:''}</td>`+
+      hours.map(h=>`<td class="num ${row.cells[h]?'':'zero'}">${row.cells[h]?row.cells[h].toLocaleString('es-GT'):''}</td>`).join('')+
+      `<td class="num strong">${row.total?row.total.toLocaleString('es-GT'):''}</td></tr>`);
+    if(isOpen){
+      row.children.forEach(ch=>{
+        body.push(`<tr class="child-row"><td class="child-name">↳ ${safe(ch.orden)}<small>${ch.total.toLocaleString('es-GT')} unidad${ch.total===1?'':'es'} · ${ch.escaneos.toLocaleString('es-GT')} escaneo${ch.escaneos===1?'':'s'}</small></td>`+
+          hours.map(h=>`<td class="num ${ch.cells[h]?'':'zero'}">${ch.cells[h]?ch.cells[h].toLocaleString('es-GT'):''}</td>`).join('')+
+          `<td class="num strong">${ch.total?ch.total.toLocaleString('es-GT'):''}</td></tr>`);
+      });
+    }
+  });
+
+  $('hourTable').innerHTML='<thead><tr><th>Operación</th>'+hours.map(h=>`<th>${h}</th>`).join('')+'<th>Total</th></tr></thead><tbody>'+body.join('')+`</tbody><tfoot><tr class="total-row"><td>Total</td>${hours.map(h=>`<td class="num">${totals[h]?totals[h].toLocaleString('es-GT'):''}</td>`).join('')}<td class="num">${grand.toLocaleString('es-GT')}</td></tr></tfoot>`;
+}
+function setView(v){ currentView=v; $('tabHour').classList.toggle('on',v==='hour'); $('tabDetail').classList.toggle('on',v==='detail'); $('hourView').classList.toggle('hidden',v!=='hour'); $('detailView').classList.toggle('hidden',v!=='detail'); }
+function mergeNewRows(rows){ const seen=new Set(allRows.map(r=>(r.id||'')+'|'+r.orden+'|'+r.etapa+'|'+r.timestamp)); let changed=false; rows.map(normalizeRow).map(enrichSearch).forEach(r=>{const k=(r.id||'')+'|'+r.orden+'|'+r.etapa+'|'+r.timestamp; if(!seen.has(k)){allRows.push(r); seen.add(k); changed=true; if(r.timestamp && r.timestamp>lastTimestamp) lastTimestamp=r.timestamp;}}); if(changed){buildOptions();applyFilters();}}
+async function pollNew(){ if(!sb) return; try{ const {start,end}=localDateRangeToUtc($('fDesde').value,$('fHasta').value); let q=sb.from(SCAN_TABLE).select('*').order('timestamp',{ascending:true}).limit(1000); if(lastTimestamp) q=q.gt('timestamp',lastTimestamp); else if(start) q=q.gte('timestamp',start); if(end) q=q.lte('timestamp',end); const {data,error}=await q; if(error) throw error; if(data&&data.length) mergeNewRows(data); setSbStatus('live','En vivo + sondeo'); }catch(e){ console.warn(e); setSbStatus('poll','Sondeo activo'); }}
+function startRealtime(){ try{ if(rtChannel) sb.removeChannel(rtChannel); rtChannel=sb.channel('scan_log_live').on('postgres_changes',{event:'INSERT',schema:'public',table:SCAN_TABLE},payload=>{ if(payload.new) mergeNewRows([payload.new]); }).subscribe(st=>{ if(st==='SUBSCRIBED') setSbStatus('live','En vivo + sondeo'); else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(st)) setSbStatus('poll','Sondeo activo'); }); }catch(e){ console.warn(e); setSbStatus('poll','Sondeo activo'); }}
+
+function toggleTheme(){
+  document.body.classList.toggle('dark');
+  const dark=document.body.classList.contains('dark');
+  localStorage.setItem('scanPanelTheme',dark?'dark':'light');
+  const lbl=$('themeLbl'); if(lbl) lbl.textContent=dark?'Negro':'Claro';
+}
+function loadTheme(){
+  const saved=localStorage.getItem('scanPanelTheme');
+  if(saved==='dark') document.body.classList.add('dark');
+  const lbl=$('themeLbl'); if(lbl) lbl.textContent=document.body.classList.contains('dark')?'Negro':'Claro';
+}
+
+(function init(){ loadTheme(); const today=isoDateLocal(); $('fDesde').value=today; $('fHasta').value=today; $('fHourDate').value=today; try{ sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); }catch(e){ setSbStatus('err','Sin conexión'); return; } reloadAll(); startRealtime(); pollInt=setInterval(pollNew,5000); setView('hour'); })();
+</script>
+</body>
+</html>
