@@ -37,7 +37,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const SUPABASE_URL="https://auclvnesasgjmwkoswwj.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_p6MgGIEpSUHA2OG1aNLRxQ_RSh9edpZ";
 const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-const STAGES=['BODEGA','CORTE','PEGADO','TROQUELES','ESTAMPADO','COSTURA','PUNTAS','CANTOS','MANUALIDADES','ATRAQUE','QA'];
+const STAGES=['BODEGA','CORTE','PEGADO','TROQUEL','ESTAMPADO','COSTURA','PUNTAS','CANTOS','MANUALIDADES','ATRAQUE','QA'];
 const RECENT_MS=2200, REFRESH_MS=4000, PAGE_SIZE=1000, PENDING_KEY='qr_scan_pending_v2';
 let activeStage=STAGES[0], scanLog=[], planQtyIndex=new Map(), availableCameras=[], selectedCameraId='', scanner=null, scannerRunning=false, recentReads=new Map(), permissionPrimed=false, refreshTimer=null, activeVideoTrack=null, torchOn=false, registering=false, pendingSync=false, nativeDetector=null, nativeDetectTimer=null, nativeStream=null, decodeRaf=null, decodeCanvas=null, decodeCtx=null, decodeBusy=false, lastDecodeAt=0;
 const $=id=>document.getElementById(id); const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
